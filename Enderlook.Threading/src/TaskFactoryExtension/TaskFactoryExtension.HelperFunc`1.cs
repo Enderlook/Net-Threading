@@ -46,41 +46,32 @@ namespace Enderlook.Threading
         public static Task<TResult> StartNew<TResult>(this TaskFactory<TResult> source, Func<TResult> action, TaskCreationOptions creationOptions)
             => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action), creationOptions);
 
-        private class HelperFunc<TResult>
+        private static class HelperFunc<TResult>
         {
             public static readonly Func<object, TResult> Basic = BasicMethod;
 
-            private static readonly HelperFunc<TResult>[] packs;
+            private static readonly (Func<TResult> action, int isBeingUsed)[] packs = new (Func<TResult> action, int isBeingUsed)[PacksLength];
             private static int index;
 
-            static HelperFunc()
-            {
-                packs = new HelperFunc<TResult>[PacksLength];
-                for (int i = 0; i < PacksLength; i++)
-                    packs[i] = new HelperFunc<TResult>();
-            }
-
-            private Func<TResult> action;
-            private int isBeingUsed;
 
             private static TResult BasicMethod(object obj)
             {
-                var pack = (HelperFunc<TResult>)obj;
+                ref var pack = ref packs[(int)obj];
                 var action = pack.action;
-                pack.action = null;
+                pack.action = default;
                 Interlocked.Exchange(ref pack.isBeingUsed, 0);
                 return action();
             }
 
-            public static HelperFunc<TResult> Create(Func<TResult> action)
+            public static object Create(Func<TResult> action)
             {
                 int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                var pack = packs[index_];
+                ref var pack = ref packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
 
-                return pack;
+                return indexes[index_];
             }
         }
     }

@@ -62,41 +62,31 @@ namespace Enderlook.Threading
             where TFunc : IFunc<TResult>
             => source.StartNew(HelperFuncNoAlloc<TFunc, TResult>.Basic, HelperFuncNoAlloc<TFunc, TResult>.Create(function), creationOptions);
 
-        private class HelperFuncNoAlloc<TFunc, TResult> where TFunc : IFunc<TResult>
+        private static class HelperFuncNoAlloc<TFunc, TResult> where TFunc : IFunc<TResult>
         {
             public static readonly Func<object, TResult> Basic = BasicMethod;
 
-            private static readonly HelperFuncNoAlloc<TFunc, TResult>[] packs;
+            private static readonly (TFunc action, int isBeingUsed)[] packs = new (TFunc action, int isBeingUsed)[PacksLength];
             private static int index;
-
-            static HelperFuncNoAlloc()
-            {
-                packs = new HelperFuncNoAlloc<TFunc, TResult>[PacksLength];
-                for (int i = 0; i < PacksLength; i++)
-                    packs[i] = new HelperFuncNoAlloc<TFunc, TResult>();
-            }
-
-            private TFunc action;
-            private int isBeingUsed;
 
             private static TResult BasicMethod(object obj)
             {
-                var pack = (HelperFuncNoAlloc<TFunc, TResult>)obj;
+                ref var pack = ref packs[(int)obj];
                 var action = pack.action;
                 pack.action = default;
                 Interlocked.Exchange(ref pack.isBeingUsed, 0);
                 return action.Invoke();
             }
 
-            public static HelperFuncNoAlloc<TFunc, TResult> Create(TFunc action)
+            public static object Create(TFunc action)
             {
-                var index_ = Interlocked.Increment(ref index) % PacksLength;
+                int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                var pack = packs[index_];
+                ref var pack = ref packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
 
-                return pack;
+                return indexes[index_];
             }
         }
     }

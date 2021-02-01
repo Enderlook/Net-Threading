@@ -76,23 +76,12 @@ namespace Enderlook.Threading
         {
             public static readonly Func<object, TResult> Basic = BasicMethod;
 
-            private static readonly HelperFuncNoAlloc<TFunc, TState, TResult>[] packs;
+            private static readonly (TFunc action, TState state, int isBeingUsed)[] packs = new (TFunc action, TState state, int isBeingUsed)[PacksLength];
             private static int index;
-
-            static HelperFuncNoAlloc()
-            {
-                packs = new HelperFuncNoAlloc<TFunc, TState, TResult>[PacksLength];
-                for (int i = 0; i < PacksLength; i++)
-                    packs[i] = new HelperFuncNoAlloc<TFunc, TState, TResult>();
-            }
-
-            private TFunc action;
-            private TState state;
-            private int isBeingUsed;
 
             private static TResult BasicMethod(object obj)
             {
-                var pack = (HelperFuncNoAlloc<TFunc, TState, TResult>)obj;
+                ref var pack = ref packs[(int)obj];
                 var action = pack.action;
                 var state = pack.state;
                 pack.action = default;
@@ -101,16 +90,16 @@ namespace Enderlook.Threading
                 return action.Invoke(state);
             }
 
-            public static HelperFuncNoAlloc<TFunc, TState, TResult> Create(TFunc action, TState state)
+            public static object Create(TFunc action, TState state)
             {
-                var index_ = Interlocked.Increment(ref index) % PacksLength;
+                int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                var pack = packs[index_];
+                ref var pack = ref packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
                 pack.state = state;
 
-                return pack;
+                return indexes[index_];
             }
         }
     }

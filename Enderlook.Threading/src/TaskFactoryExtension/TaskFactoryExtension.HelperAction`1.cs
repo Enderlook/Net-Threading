@@ -26,27 +26,16 @@ namespace Enderlook.Threading
         public static Task StartNew<TState>(this TaskFactory source, Action<TState> action, TState state, TaskCreationOptions creationOptions)
             => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Create(action, state), creationOptions);
 
-        private class HelperAction<TState>
+        private static class HelperAction<TState>
         {
             public static readonly Action<object> Basic = BasicMethod;
 
-            private static readonly HelperAction<TState>[] packs;
+            private static readonly (Action<TState> action, TState state, int isBeingUsed)[] packs = new (Action<TState> action, TState state, int isBeingUsed)[PacksLength];
             private static int index;
-
-            static HelperAction()
-            {
-                packs = new HelperAction<TState>[PacksLength];
-                for (int i = 0; i < PacksLength; i++)
-                    packs[i] = new HelperAction<TState>();
-            }
-
-            private TState state;
-            private Action<TState> action;
-            private int isBeingUsed;
 
             private static void BasicMethod(object obj)
             {
-                var pack = (HelperAction<TState>)obj;
+                ref var pack = ref packs[(int)obj];
                 var action = pack.action;
                 var state = pack.state;
                 pack.action = null;
@@ -55,16 +44,16 @@ namespace Enderlook.Threading
                 action(state);
             }
 
-            public static HelperAction<TState> Create(Action<TState> action, TState state)
+            public static object Create(Action<TState> action, TState state)
             {
-                var index_ = Interlocked.Increment(ref index) % PacksLength;
+                int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                var pack = packs[index_];
+                ref var pack = ref packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
                 pack.state = state;
 
-                return pack;
+                return indexes[index_];
             }
         }
     }

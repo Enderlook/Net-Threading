@@ -54,45 +54,34 @@ namespace Enderlook.Threading
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory<TResult> source, Func<TState, TResult> action, TState state, TaskCreationOptions creationOptions)
             => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), creationOptions);
 
-        private class HelperFunc<TState, TResult>
+        private static class HelperFunc<TState, TResult>
         {
             public static readonly Func<object, TResult> Basic = BasicMethod;
 
-            private static readonly HelperFunc<TState, TResult>[] packs;
+            private static readonly (Func<TState, TResult> action, TState state, int isBeingUsed)[] packs = new (Func<TState, TResult> action, TState state, int isBeingUsed)[PacksLength];
             private static int index;
-
-            static HelperFunc()
-            {
-                packs = new HelperFunc<TState, TResult>[PacksLength];
-                for (int i = 0; i < PacksLength; i++)
-                    packs[i] = new HelperFunc<TState, TResult>();
-            }
-
-            private Func<TState, TResult> action;
-            private TState state;
-            private int isBeingUsed;
 
             private static TResult BasicMethod(object obj)
             {
-                var pack = (HelperFunc<TState, TResult>)obj;
+                ref var pack = ref packs[(int)obj];
                 var action = pack.action;
                 var state = pack.state;
                 pack.action = null;
                 pack.state = default;
                 Interlocked.Exchange(ref pack.isBeingUsed, 0);
-                return action(state);
+                return action.Invoke(state);
             }
 
-            public static HelperFunc<TState, TResult> Create(Func<TState, TResult> action, TState state)
+            public static object Create(Func<TState, TResult> action, TState state)
             {
                 int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                var pack = packs[index_];
+                ref var pack = ref packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
                 pack.state = state;
 
-                return pack;
+                return indexes[index_];
             }
         }
     }

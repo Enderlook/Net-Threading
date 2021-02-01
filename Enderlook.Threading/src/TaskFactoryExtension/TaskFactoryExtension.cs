@@ -8,5 +8,13 @@ namespace Enderlook.Threading
     public static partial class TaskFactoryExtension
     {
         private const int PacksLength = 100;
+        private static readonly object[] indexes;
+
+        static TaskFactoryExtension()
+        {
+            indexes = new object[PacksLength];
+            for (int i = 0; i < PacksLength; i++)
+                indexes[i] = i;
+        }
     }
 }

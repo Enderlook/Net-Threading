@@ -30,41 +30,31 @@ namespace Enderlook.Threading
             where TAction : IAction
             => source.StartNew(HelperActionNonAlloc<TAction>.Basic, HelperActionNonAlloc<TAction>.Create(action), creationOptions);
 
-        private class HelperActionNonAlloc<TAction> where TAction : IAction
+        private static class HelperActionNonAlloc<TAction> where TAction : IAction
         {
             public static readonly Action<object> Basic = BasicMethod;
 
-            private static readonly HelperActionNonAlloc<TAction>[] packs;
+            private static readonly (TAction action, int isBeingUsed)[] packs = new (TAction action, int isBeingUsed)[PacksLength];
             private static int index;
-
-            static HelperActionNonAlloc()
-            {
-                packs = new HelperActionNonAlloc<TAction>[PacksLength];
-                for (int i = 0; i < PacksLength; i++)
-                    packs[i] = new HelperActionNonAlloc<TAction>();
-            }
-
-            private TAction action;
-            private int isBeingUsed;
 
             private static void BasicMethod(object obj)
             {
-                var pack = (HelperActionNonAlloc<TAction>)obj;
+                ref var pack = ref packs[(int)obj];
                 var action = pack.action;
                 pack.action = default;
                 Interlocked.Exchange(ref pack.isBeingUsed, 0);
                 action.Invoke();
             }
 
-            public static HelperActionNonAlloc<TAction> Create(TAction action)
+            public static object Create(TAction action)
             {
                 int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                var pack = packs[index_];
+                ref var pack = ref packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
 
-                return pack;
+                return indexes[index_];
             }
         }
     }
