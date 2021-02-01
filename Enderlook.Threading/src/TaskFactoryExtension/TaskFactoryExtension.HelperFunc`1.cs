@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,76 +9,78 @@ namespace Enderlook.Threading
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult})"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory source, Func<TResult> action)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action));
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action));
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult}, CancellationToken)"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory source, Func<TResult> action, CancellationToken cancellationToken)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action), cancellationToken);
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action), cancellationToken);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult}, CancellationToken, TaskCreationOptions, TaskScheduler)"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory source, Func<TResult> action, CancellationToken cancellationToken, TaskCreationOptions creationOptions, TaskScheduler scheduler)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action), cancellationToken, creationOptions, scheduler);
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action), cancellationToken, creationOptions, scheduler);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult}, TaskCreationOptions)"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory source, Func<TResult> action, TaskCreationOptions creationOptions)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action), creationOptions);
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action), creationOptions);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult})"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory<TResult> source, Func<TResult> action)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action));
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action));
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult}, CancellationToken)"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory<TResult> source, Func<TResult> action, CancellationToken cancellationToken)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action), cancellationToken);
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action), cancellationToken);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult}, CancellationToken, TaskCreationOptions, TaskScheduler)"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory<TResult> source, Func<TResult> action, CancellationToken cancellationToken, TaskCreationOptions creationOptions, TaskScheduler scheduler)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action), cancellationToken, creationOptions, scheduler);
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action), cancellationToken, creationOptions, scheduler);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{TResult}, TaskCreationOptions)"/>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TResult>(this TaskFactory<TResult> source, Func<TResult> action, TaskCreationOptions creationOptions)
-            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Pack.Create(action), creationOptions);
+            => source.StartNew(HelperFunc<TResult>.Basic, HelperFunc<TResult>.Create(action), creationOptions);
 
-        private static class HelperFunc<TResult>
+        private class HelperFunc<TResult>
         {
             public static readonly Func<object, TResult> Basic = BasicMethod;
 
-            private static TResult BasicMethod(object obj) => ((Pack)obj).Run();
+            private static readonly HelperFunc<TResult>[] packs;
+            private static int index;
 
-            public sealed class Pack
+            static HelperFunc()
             {
-                private static ConcurrentBag<Pack> packs = new ConcurrentBag<Pack>();
+                packs = new HelperFunc<TResult>[PacksLength];
+                for (int i = 0; i < PacksLength; i++)
+                    packs[i] = new HelperFunc<TResult>();
+            }
 
-                private Func<TResult> action;
+            private Func<TResult> action;
+            private int isBeingUsed;
 
-                private Pack(Func<TResult> action) => this.action = action;
+            private static TResult BasicMethod(object obj)
+            {
+                HelperFunc<TResult> pack = (HelperFunc<TResult>)obj;
+                Func<TResult> action = pack.action;
+                pack.action = null;
+                Interlocked.Exchange(ref pack.isBeingUsed, 0);
+                return action();
+            }
 
-                public TResult Run()
-                {
-                    TResult result = action();
-                    action = null;
-                    packs.Add(this);
-                    return result;
-                }
+            public static HelperFunc<TResult> Create(Func<TResult> action)
+            {
+                int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                public static Pack Create(Func<TResult> action)
-                {
-                    if (packs.TryTake(out Pack pack))
-                    {
-                        pack.Set(action);
-                        return pack;
-                    }
-                    return new Pack(action);
-                }
+                HelperFunc<TResult> pack = packs[index_];
+                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
+                pack.action = action;
 
-                private void Set(Func<TResult> action) => this.action = action;
+                return pack;
             }
         }
     }

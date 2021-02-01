@@ -7,5 +7,6 @@ namespace Enderlook.Threading
     /// </summary>
     public static partial class TaskFactoryExtension
     {
+        private const int PacksLength = 100;
     }
 }

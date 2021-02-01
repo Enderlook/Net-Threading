@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,93 +10,89 @@ namespace Enderlook.Threading
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory source, Func<TState, TResult> action, TState state)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state));
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state));
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory source, Func<TState, TResult> action, TState state, CancellationToken cancellationToken)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state), cancellationToken);
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), cancellationToken);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken, TaskCreationOptions, TaskScheduler)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory source, Func<TState, TResult> action, TState state, CancellationToken cancellationToken, TaskCreationOptions creationOptions, TaskScheduler scheduler)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state), cancellationToken, creationOptions, scheduler);
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), cancellationToken, creationOptions, scheduler);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, TaskCreationOptions)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory source, Func<TState, TResult> action, TState state, TaskCreationOptions creationOptions)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state), creationOptions);
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), creationOptions);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory<TResult> source, Func<TState, TResult> action, TState state)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state));
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state));
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory<TResult> source, Func<TState, TResult> action, TState state, CancellationToken cancellationToken)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state), cancellationToken);
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), cancellationToken);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken, TaskCreationOptions, TaskScheduler)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory<TResult> source, Func<TState, TResult> action, TState state, CancellationToken cancellationToken, TaskCreationOptions creationOptions, TaskScheduler scheduler)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state), cancellationToken, creationOptions, scheduler);
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), cancellationToken, creationOptions, scheduler);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, TaskCreationOptions)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory<TResult> source, Func<TState, TResult> action, TState state, TaskCreationOptions creationOptions)
-            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Pack.Create(action, state), creationOptions);
+            => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), creationOptions);
 
-        private static class HelperFunc<TState, TResult>
+        private class HelperFunc<TState, TResult>
         {
             public static readonly Func<object, TResult> Basic = BasicMethod;
 
-            private static TResult BasicMethod(object obj) => ((Pack)obj).Run();
+            private static readonly HelperFunc<TState, TResult>[] packs;
+            private static int index;
 
-            public sealed class Pack
+            static HelperFunc()
             {
-                private static ConcurrentBag<Pack> packs = new ConcurrentBag<Pack>();
+                packs = new HelperFunc<TState, TResult>[PacksLength];
+                for (int i = 0; i < PacksLength; i++)
+                    packs[i] = new HelperFunc<TState, TResult>();
+            }
 
-                private Func<TState, TResult> action;
-                private TState state;
+            private Func<TState, TResult> action;
+            private TState state;
+            private int isBeingUsed;
 
-                private Pack(Func<TState, TResult> action, TState state)
-                {
-                    this.action = action;
-                    this.state = state;
-                }
+            private static TResult BasicMethod(object obj)
+            {
+                HelperFunc<TState, TResult> pack = (HelperFunc<TState, TResult>)obj;
+                Func<TState, TResult> action = pack.action;
+                TState state = pack.state;
+                pack.action = null;
+                pack.state = default;
+                Interlocked.Exchange(ref pack.isBeingUsed, 0);
+                return action(state);
+            }
 
-                public TResult Run()
-                {
-                    TResult result = action(state);
-                    action = null;
-                    state = default;
-                    packs.Add(this);
-                    return result;
-                }
+            public static HelperFunc<TState, TResult> Create(Func<TState, TResult> action, TState state)
+            {
+                int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                public static Pack Create(Func<TState, TResult> action, TState state)
-                {
-                    if (packs.TryTake(out Pack pack))
-                    {
-                        pack.Set(action, state);
-                        return pack;
-                    }
-                    return new Pack(action, state);
-                }
+                HelperFunc<TState, TResult> pack = packs[index_];
+                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
+                pack.action = action;
+                pack.state = state;
 
-                private void Set(Func<TState, TResult> action, TState state)
-                {
-                    this.action = action;
-                    this.state = state;
-                }
+                return pack;
             }
         }
     }

@@ -13,7 +13,7 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory source, TFunc function, TState state)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state));
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state));
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken)"/>
         /// <typeparam name="TFunc">Type of function.</typeparam>
@@ -21,7 +21,7 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory source, TFunc function, TState state, CancellationToken cancellationToken)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state), cancellationToken);
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state), cancellationToken);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken, TaskCreationOptions, TaskScheduler)"/>
         /// <typeparam name="TFunc">Type of function.</typeparam>
@@ -29,7 +29,7 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory source, TFunc function, TState state, CancellationToken cancellationToken, TaskCreationOptions creationOptions, TaskScheduler scheduler)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state), cancellationToken, creationOptions, scheduler);
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state), cancellationToken, creationOptions, scheduler);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, TaskCreationOptions)"/>
         /// <typeparam name="TFunc">Type of function.</typeparam>
@@ -37,7 +37,7 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory source, TFunc function, TState state, TaskCreationOptions creationOptions)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state), creationOptions);
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state), creationOptions);
 
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object)"/>
@@ -46,7 +46,7 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory<TResult> source, TFunc function, TState state)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state));
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state));
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken)"/>
         /// <typeparam name="TFunc">Type of function.</typeparam>
@@ -54,7 +54,7 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory<TResult> source, TFunc function, TState state, CancellationToken cancellationToken)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state), cancellationToken);
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state), cancellationToken);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, CancellationToken, TaskCreationOptions, TaskScheduler)"/>
         /// <typeparam name="TFunc">Type of function.</typeparam>
@@ -62,7 +62,7 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory<TResult> source, TFunc function, TState state, CancellationToken cancellationToken, TaskCreationOptions creationOptions, TaskScheduler scheduler)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state), cancellationToken, creationOptions, scheduler);
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state), cancellationToken, creationOptions, scheduler);
 
         /// <inheritdoc cref="TaskFactory.StartNew{TResult}(Func{object, TResult}, object, TaskCreationOptions)"/>
         /// <typeparam name="TFunc">Type of function.</typeparam>
@@ -70,51 +70,48 @@ namespace Enderlook.Threading
         /// <typeparam name="TResult">Type of result.</typeparam>
         public static Task<TResult> StartNew<TFunc, TState, TResult>(this TaskFactory<TResult> source, TFunc function, TState state, TaskCreationOptions creationOptions)
             where TFunc : IFunc<TState, TResult>
-            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Pack.Create(function, state), creationOptions);
+            => source.StartNew(HelperFuncNoAlloc<TFunc, TState, TResult>.Basic, HelperFuncNoAlloc<TFunc, TState, TResult>.Create(function, state), creationOptions);
 
-        private static class HelperFuncNoAlloc<TFunc, TState, TResult> where TFunc : IFunc<TState, TResult>
+        private class HelperFuncNoAlloc<TFunc, TState, TResult> where TFunc : IFunc<TState, TResult>
         {
             public static readonly Func<object, TResult> Basic = BasicMethod;
 
-            private static TResult BasicMethod(object obj) => ((Pack)obj).Run();
+            private static readonly HelperFuncNoAlloc<TFunc, TState, TResult>[] packs;
+            private static int index;
 
-            public sealed class Pack
+            static HelperFuncNoAlloc()
             {
-                private static ConcurrentBag<Pack> packs = new ConcurrentBag<Pack>();
+                packs = new HelperFuncNoAlloc<TFunc, TState, TResult>[PacksLength];
+                for (int i = 0; i < PacksLength; i++)
+                    packs[i] = new HelperFuncNoAlloc<TFunc, TState, TResult>();
+            }
 
-                private TFunc function;
-                private TState state;
+            private TFunc action;
+            private TState state;
+            private int isBeingUsed;
 
-                private Pack(TFunc function, TState state)
-                {
-                    this.function = function;
-                    this.state = state;
-                }
+            private static TResult BasicMethod(object obj)
+            {
+                HelperFuncNoAlloc<TFunc, TState, TResult> pack = (HelperFuncNoAlloc<TFunc, TState, TResult>)obj;
+                TFunc action = pack.action;
+                TState state = pack.state;
+                pack.action = default;
+                pack.state = default;
+                Interlocked.Exchange(ref pack.isBeingUsed, 0);
+                return action.Invoke(state);
+            }
 
-                public TResult Run()
-                {
-                    TResult result = function.Invoke(state);
-                    function = default;
-                    packs.Add(this);
-                    return result;
-                }
+            public static HelperFuncNoAlloc<TFunc, TState, TResult> Create(TFunc action, TState state)
+            {
+                int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                public static Pack Create(TFunc function, TState state)
-                {
-                    if (packs.TryTake(out Pack pack))
-                    {
-                        pack.Set(function, state);
-                        return pack;
-                    }
-                    return new Pack(function, state);
-                }
+                HelperFuncNoAlloc<TFunc, TState, TResult> pack = packs[index_];
+                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
+                pack.action = action;
+                pack.state = state;
 
-                private void Set(TFunc function, TState state)
-                {
-                    this.function = function;
-                    this.state = state;
-                }
+                return pack;
             }
         }
-        }
+    }
 }

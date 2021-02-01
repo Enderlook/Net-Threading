@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,65 +9,62 @@ namespace Enderlook.Threading
         /// <inheritdoc cref="TaskFactory.StartNew(Action{object}, object)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         public static Task StartNew<TState>(this TaskFactory source, Action<TState> action, TState state)
-            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Pack.Create(action, state));
+            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Create(action, state));
 
         /// <inheritdoc cref="TaskFactory.StartNew(Action{object}, object, CancellationToken)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         public static Task StartNew<TState>(this TaskFactory source, Action<TState> action, TState state, CancellationToken cancellationToken)
-            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Pack.Create(action, state), cancellationToken);
+            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Create(action, state), cancellationToken);
 
         /// <inheritdoc cref="TaskFactory.StartNew(Action{object}, object, CancellationToken, TaskCreationOptions, TaskScheduler)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         public static Task StartNew<TState>(this TaskFactory source, Action<TState> action, TState state, CancellationToken cancellationToken, TaskCreationOptions creationOptions, TaskScheduler scheduler)
-            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Pack.Create(action, state), cancellationToken, creationOptions, scheduler);
+            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Create(action, state), cancellationToken, creationOptions, scheduler);
 
         /// <inheritdoc cref="TaskFactory.StartNew(Action{object}, object, TaskCreationOptions)"/>
         /// <typeparam name="TState">Type of state.</typeparam>
         public static Task StartNew<TState>(this TaskFactory source, Action<TState> action, TState state, TaskCreationOptions creationOptions)
-            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Pack.Create(action, state), creationOptions);
+            => source.StartNew(HelperAction<TState>.Basic, HelperAction<TState>.Create(action, state), creationOptions);
 
-        private static class HelperAction<TState>
+        private class HelperAction<TState>
         {
             public static readonly Action<object> Basic = BasicMethod;
 
-            private static void BasicMethod(object obj) => ((Pack)obj).Run();
+            private static readonly HelperAction<TState>[] packs;
+            private static int index;
 
-            public sealed class Pack
+            static HelperAction()
             {
-                private static ConcurrentBag<Pack> packs = new ConcurrentBag<Pack>();
+                packs = new HelperAction<TState>[PacksLength];
+                for (int i = 0; i < PacksLength; i++)
+                    packs[i] = new HelperAction<TState>();
+            }
 
-                private Action<TState> action;
-                private TState state;
+            private TState state;
+            private Action<TState> action;
+            private int isBeingUsed;
 
-                private Pack(Action<TState> action, TState state)
-                {
-                    this.action = action;
-                    this.state = state;
-                }
+            private static void BasicMethod(object obj)
+            {
+                HelperAction<TState> pack = (HelperAction<TState>)obj;
+                Action<TState> action = pack.action;
+                TState state = pack.state;
+                pack.action = null;
+                pack.state = default;
+                Interlocked.Exchange(ref pack.isBeingUsed, 0);
+                action(state);
+            }
 
-                public void Run()
-                {
-                    action(state);
-                    action = null;
-                    state = default;
-                    packs.Add(this);
-                }
+            public static HelperAction<TState> Create(Action<TState> action, TState state)
+            {
+                int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                public static Pack Create(Action<TState> action, TState state)
-                {
-                    if (packs.TryTake(out Pack pack))
-                    {
-                        pack.Set(action, state);
-                        return pack;
-                    }
-                    return new Pack(action, state);
-                }
+                HelperAction<TState> pack = packs[index_];
+                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
+                pack.action = action;
+                pack.state = state;
 
-                private void Set(Action<TState> action, TState state)
-                {
-                    this.action = action;
-                    this.state = state;
-                }
+                return pack;
             }
         }
     }
