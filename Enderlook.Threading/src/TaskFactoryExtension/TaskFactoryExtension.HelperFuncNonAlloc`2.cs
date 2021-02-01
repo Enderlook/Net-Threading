@@ -81,8 +81,8 @@ namespace Enderlook.Threading
 
             private static TResult BasicMethod(object obj)
             {
-                HelperFuncNoAlloc<TFunc, TResult> pack = (HelperFuncNoAlloc<TFunc, TResult>)obj;
-                TFunc action = pack.action;
+                var pack = (HelperFuncNoAlloc<TFunc, TResult>)obj;
+                var action = pack.action;
                 pack.action = default;
                 Interlocked.Exchange(ref pack.isBeingUsed, 0);
                 return action.Invoke();
@@ -90,9 +90,9 @@ namespace Enderlook.Threading
 
             public static HelperFuncNoAlloc<TFunc, TResult> Create(TFunc action)
             {
-                int index_ = Interlocked.Increment(ref index) % PacksLength;
+                var index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                HelperFuncNoAlloc<TFunc, TResult> pack = packs[index_];
+                var pack = packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
 

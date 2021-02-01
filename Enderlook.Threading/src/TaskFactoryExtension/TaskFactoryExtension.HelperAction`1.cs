@@ -46,9 +46,9 @@ namespace Enderlook.Threading
 
             private static void BasicMethod(object obj)
             {
-                HelperAction<TState> pack = (HelperAction<TState>)obj;
-                Action<TState> action = pack.action;
-                TState state = pack.state;
+                var pack = (HelperAction<TState>)obj;
+                var action = pack.action;
+                var state = pack.state;
                 pack.action = null;
                 pack.state = default;
                 Interlocked.Exchange(ref pack.isBeingUsed, 0);
@@ -57,9 +57,9 @@ namespace Enderlook.Threading
 
             public static HelperAction<TState> Create(Action<TState> action, TState state)
             {
-                int index_ = Interlocked.Increment(ref index) % PacksLength;
+                var index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                HelperAction<TState> pack = packs[index_];
+                var pack = packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
                 pack.state = state;

@@ -65,8 +65,8 @@ namespace Enderlook.Threading
 
             private static TResult BasicMethod(object obj)
             {
-                HelperFunc<TResult> pack = (HelperFunc<TResult>)obj;
-                Func<TResult> action = pack.action;
+                var pack = (HelperFunc<TResult>)obj;
+                var action = pack.action;
                 pack.action = null;
                 Interlocked.Exchange(ref pack.isBeingUsed, 0);
                 return action();
@@ -76,7 +76,7 @@ namespace Enderlook.Threading
             {
                 int index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                HelperFunc<TResult> pack = packs[index_];
+                var pack = packs[index_];
                 while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
                 pack.action = action;
 
