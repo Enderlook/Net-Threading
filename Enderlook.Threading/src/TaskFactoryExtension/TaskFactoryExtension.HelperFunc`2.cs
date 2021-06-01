@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -63,25 +64,41 @@ namespace Enderlook.Threading
 
             private TResult BasicMethod(object obj)
             {
-                ref var pack = ref packs[(int)obj];
-                var action = pack.action;
-                var state = pack.state;
-                pack.action = null;
-                pack.state = default;
-                Interlocked.Exchange(ref pack.isBeingUsed, 0);
-                return action.Invoke(state);
+                if (obj is Tuple<Func<TState, TResult>, TState> tuple)
+                    return tuple.Item1(tuple.Item2);
+                else
+                {
+                    ref var pack = ref Get(packs, obj);
+                    var action = pack.action;
+                    var state = pack.state;
+                    pack.action = null;
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TState>())
+#endif
+                        pack.state = default;
+                    Interlocked.Exchange(ref pack.isBeingUsed, 0);
+                    return action(state);
+                }
             }
 
             public static object Create(Func<TState, TResult> action, TState state)
             {
-                int index_ = Interlocked.Increment(ref index) % PacksLength;
+                var index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                ref var pack = ref packs[index_];
-                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
+                var packs_ = packs;
+                ref var pack = ref Get(packs_, index_);
+
+                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1)
+                {
+                    if (index_ == 0)
+                        return Tuple.Create(action, state);
+                    pack = ref Get(packs_, --index_);
+                }
+
                 pack.action = action;
                 pack.state = state;
 
-                return indexes[index_];
+                return GetBoxedInteger(index_);
             }
         }
     }

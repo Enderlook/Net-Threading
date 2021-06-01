@@ -55,22 +55,35 @@ namespace Enderlook.Threading
 
             private TResult BasicMethod(object obj)
             {
-                ref var pack = ref packs[(int)obj];
-                var action = pack.action;
-                pack.action = default;
-                Interlocked.Exchange(ref pack.isBeingUsed, 0);
-                return action();
+                if (obj is Func<TResult> func)
+                    return func();
+                else
+                {
+                    ref var pack = ref Get(packs, obj);
+                    var action = pack.action;
+                    pack.action = null;
+                    Interlocked.Exchange(ref pack.isBeingUsed, 0);
+                    return action();
+                }
             }
 
             public static object Create(Func<TResult> action)
             {
-                int index_ = Interlocked.Increment(ref index) % PacksLength;
+                var index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                ref var pack = ref packs[index_];
-                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
+                var packs_ = packs;
+                ref var pack = ref Get(packs_, index_);
+
+                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1)
+                {
+                    if (index_ == 0)
+                        return action;
+                    pack = ref Get(packs_, --index_);
+                }
+
                 pack.action = action;
 
-                return indexes[index_];
+                return GetBoxedInteger(index_);
             }
         }
     }

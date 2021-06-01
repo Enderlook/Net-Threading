@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -39,19 +40,35 @@ namespace Enderlook.Threading
 
             private void BasicMethod(object obj)
             {
-                ref var pack = ref packs[(int)obj];
-                var action = pack.action;
-                pack.action = default;
-                Interlocked.Exchange(ref pack.isBeingUsed, 0);
-                action.Invoke();
+                if (obj is Tuple<TAction> tuple)
+                    tuple.Item1.Invoke();
+                else
+                {
+                    ref var pack = ref Get(packs, obj);
+                    var action = pack.action;
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TAction>())
+#endif
+                        pack.action = default;
+                    Interlocked.Exchange(ref pack.isBeingUsed, 0);
+                    action.Invoke();
+                }
             }
 
             public static object Create(TAction action)
             {
-                int index_ = Interlocked.Increment(ref index) % PacksLength;
+                var index_ = Interlocked.Increment(ref index) % PacksLength;
 
-                ref var pack = ref packs[index_];
-                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1) ;
+                var packs_ = packs;
+                ref var pack = ref Get(packs_, index_);
+
+                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1)
+                {
+                    if (index_ == 0)
+                        return Tuple.Create(action);
+                    pack = ref Get(packs_, --index_);
+                }
+
                 pack.action = action;
 
                 return indexes[index_];
