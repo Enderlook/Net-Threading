@@ -34,14 +34,14 @@ namespace Enderlook.Threading
             where TAction : IAction<TState>
             => source.StartNew(HelperActionNonAlloc<TAction, TState>.Basic, HelperActionNonAlloc<TAction, TState>.Create(action, state), creationOptions);
 
-        private static class HelperActionNonAlloc<TAction, TState> where TAction : IAction<TState>
+        private class HelperActionNonAlloc<TAction, TState> where TAction : IAction<TState>
         {
-            public static readonly Action<object> Basic = BasicMethod;
+            public static readonly Action<object> Basic = new HelperActionNonAlloc<TAction, TState>().BasicMethod; // Instance calls are more performant.
 
             private static readonly (TAction action, TState state, int isBeingUsed)[] packs = new (TAction action, TState state, int isBeingUsed)[PacksLength];
             private static int index;
 
-            private static void BasicMethod(object obj)
+            private void BasicMethod(object obj)
             {
                 ref var pack = ref packs[(int)obj];
                 var action = pack.action;

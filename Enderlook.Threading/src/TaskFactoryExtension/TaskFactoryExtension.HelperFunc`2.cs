@@ -54,14 +54,14 @@ namespace Enderlook.Threading
         public static Task<TResult> StartNew<TState, TResult>(this TaskFactory<TResult> source, Func<TState, TResult> action, TState state, TaskCreationOptions creationOptions)
             => source.StartNew(HelperFunc<TState, TResult>.Basic, HelperFunc<TState, TResult>.Create(action, state), creationOptions);
 
-        private static class HelperFunc<TState, TResult>
+        private class HelperFunc<TState, TResult>
         {
-            public static readonly Func<object, TResult> Basic = BasicMethod;
+            public static readonly Func<object, TResult> Basic = new HelperFunc<TState, TResult>().BasicMethod; // Instance calls are more performant.
 
             private static readonly (Func<TState, TResult> action, TState state, int isBeingUsed)[] packs = new (Func<TState, TResult> action, TState state, int isBeingUsed)[PacksLength];
             private static int index;
 
-            private static TResult BasicMethod(object obj)
+            private TResult BasicMethod(object obj)
             {
                 ref var pack = ref packs[(int)obj];
                 var action = pack.action;

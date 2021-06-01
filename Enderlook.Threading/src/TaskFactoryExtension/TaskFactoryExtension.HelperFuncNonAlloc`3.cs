@@ -74,12 +74,12 @@ namespace Enderlook.Threading
 
         private class HelperFuncNoAlloc<TFunc, TState, TResult> where TFunc : IFunc<TState, TResult>
         {
-            public static readonly Func<object, TResult> Basic = BasicMethod;
+            public static readonly Func<object, TResult> Basic = new HelperFuncNoAlloc<TFunc, TState, TResult>().BasicMethod; // Instance calls are more performant.
 
             private static readonly (TFunc action, TState state, int isBeingUsed)[] packs = new (TFunc action, TState state, int isBeingUsed)[PacksLength];
             private static int index;
 
-            private static TResult BasicMethod(object obj)
+            private TResult BasicMethod(object obj)
             {
                 ref var pack = ref packs[(int)obj];
                 var action = pack.action;
