@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net5</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net5;net6</TargetFrameworks>
     <OutputType>Library</OutputType>
     <PackageId>Enderlook.Threading</PackageId>
     <AssemblyName>Enderlook.Threading</AssemblyName>
@@ -12,7 +12,7 @@
     <RepositoryType>git</RepositoryType>
     <Version>0.1.1</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <LangVersion>9</LangVersion>
+    <LangVersion>10</LangVersion>
     <CheckForOverflowUnderflow Condition="'$(Configuration)' == 'Debug'">true</CheckForOverflowUnderflow>
   </PropertyGroup>
 
