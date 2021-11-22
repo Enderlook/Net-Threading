@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Enderlook.Pools;
+
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,43 +38,24 @@ namespace Enderlook.Threading
         {
             public static readonly Action<object> Basic = new HelperActionNonAlloc<TAction>().BasicMethod; // Instance calls are more performant..
 
-            private static readonly (TAction action, int isBeingUsed)[] packs = new (TAction action, int isBeingUsed)[PacksLength];
-            private static int index;
-
             private void BasicMethod(object obj)
             {
-                if (obj is Tuple<TAction> tuple)
-                    tuple.Item1.Invoke();
-                else
-                {
-                    ref var pack = ref Get(packs, obj);
-                    var action = pack.action;
+                Debug.Assert(obj is StrongBox<TAction>);
+                StrongBox<TAction> box = Unsafe.As<StrongBox<TAction>>(obj);
+                TAction action = box.Value;
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TAction>())
+                if (RuntimeHelpers.IsReferenceOrContainsReferences<TAction>())
 #endif
-                        pack.action = default;
-                    Interlocked.Exchange(ref pack.isBeingUsed, 0);
-                    action.Invoke();
-                }
+                    box.Value = default;
+                ObjectPool<StrongBox<TAction>>.Shared.Return(box);
+                action.Invoke();
             }
 
             public static object Create(TAction action)
             {
-                var index_ = Interlocked.Increment(ref index) % PacksLength;
-
-                var packs_ = packs;
-                ref var pack = ref Get(packs_, index_);
-
-                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1)
-                {
-                    if (index_ == 0)
-                        return Tuple.Create(action);
-                    pack = ref Get(packs_, --index_);
-                }
-
-                pack.action = action;
-
-                return indexes[index_];
+                StrongBox<TAction> box = ObjectPool<StrongBox<TAction>>.Shared.Rent();
+                box.Value = action;
+                return box;
             }
         }
     }

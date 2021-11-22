@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Enderlook.Pools;
+
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -67,43 +70,24 @@ namespace Enderlook.Threading
         {
             public static readonly Func<object, TResult> Basic = new HelperFuncNoAlloc<TFunc, TResult>().BasicMethod; // Instance calls are more performant.
 
-            private static readonly (TFunc action, int isBeingUsed)[] packs = new (TFunc action, int isBeingUsed)[PacksLength];
-            private static int index;
-
             private TResult BasicMethod(object obj)
             {
-                if (obj is Tuple<TFunc> tuple)
-                    return tuple.Item1.Invoke();
-                else
-                {
-                    ref var pack = ref Get(packs, obj);
-                    var action = pack.action;
+                Debug.Assert(obj is StrongBox<TFunc>);
+                StrongBox<TFunc> box = Unsafe.As<StrongBox<TFunc>>(obj);
+                TFunc function = box.Value;
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TFunc>())
+                if (RuntimeHelpers.IsReferenceOrContainsReferences<TFunc>())
 #endif
-                        pack.action = default;
-                    Interlocked.Exchange(ref pack.isBeingUsed, 0);
-                    return action.Invoke();
-                }
+                    box.Value = default;
+                ObjectPool<StrongBox<TFunc>>.Shared.Return(box);
+                return function.Invoke();
             }
 
-            public static object Create(TFunc action)
+            public static object Create(TFunc function)
             {
-                var index_ = Interlocked.Increment(ref index) % PacksLength;
-
-                var packs_ = packs;
-                ref var pack = ref Get(packs_, index_);
-
-                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1)
-                {
-                    if (index_ == 0)
-                        return Tuple.Create(action);
-                    pack = ref Get(packs_, --index_);
-                }
-
-                pack.action = action;
-
-                return indexes[index_];
+                StrongBox<TFunc> box = ObjectPool<StrongBox<TFunc>>.Shared.Rent();
+                box.Value = function;
+                return box;
             }
         }
     }

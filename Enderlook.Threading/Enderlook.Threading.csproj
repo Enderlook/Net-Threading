@@ -10,10 +10,14 @@
     <Product>Enderlook.Threading</Product>
     <RepositoryUrl>https://github.com/Enderlook/Net-Threading/</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Version>0.1.1</Version>
+    <Version>0.2.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>10</LangVersion>
     <CheckForOverflowUnderflow Condition="'$(Configuration)' == 'Debug'">true</CheckForOverflowUnderflow>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Enderlook.Pools" Version="0.1.0" />
+  </ItemGroup>
 
 </Project>

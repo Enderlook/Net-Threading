@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Enderlook.Pools;
+
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,49 +42,30 @@ namespace Enderlook.Threading
         {
             public static readonly Action<object> Basic = new HelperActionNonAlloc<TAction, TState>().BasicMethod; // Instance calls are more performant.
 
-            private static readonly (TAction action, TState state, int isBeingUsed)[] packs = new (TAction action, TState state, int isBeingUsed)[PacksLength];
-            private static int index;
-
             private void BasicMethod(object obj)
             {
-                if (obj is Tuple<TAction, TState> tuple)
-                    tuple.Item1.Invoke(tuple.Item2);
-                else
-                {
-                    ref (TAction action, TState state, int isBeingUsed) pack = ref Get(packs, obj);
-                    TAction action = pack.action;
-                    TState state = pack.state;
+                Debug.Assert(obj is Tuple2<TAction, TState>);
+                Tuple2<TAction, TState> tuple = Unsafe.As<Tuple2<TAction, TState>>(obj);
+                TAction action = tuple.Item1;
+                TState state = tuple.Item2;
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TState>())
+                if (RuntimeHelpers.IsReferenceOrContainsReferences<TAction>())
 #endif
-                        pack.state = default;
+                    tuple.Item1 = default;
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-                    if (RuntimeHelpers.IsReferenceOrContainsReferences<TAction>())
+                if (RuntimeHelpers.IsReferenceOrContainsReferences<TState>())
 #endif
-                        pack.action = default;
-                    Interlocked.Exchange(ref pack.isBeingUsed, 0);
-                    action.Invoke(state);
-                }
+                    tuple.Item2 = default;
+                ObjectPool<Tuple2<TAction, TState>>.Shared.Return(tuple);
+                action.Invoke(state);
             }
 
             public static object Create(TAction action, TState state)
             {
-                int index_ = Interlocked.Increment(ref index) % PacksLength;
-
-                (TAction action, TState state, int isBeingUsed)[] packs_ = packs;
-                ref (TAction action, TState state, int isBeingUsed) pack = ref Get(packs_, index_);
-
-                while (Interlocked.Exchange(ref pack.isBeingUsed, 1) == 1)
-                {
-                    if (index_ == 0)
-                        return Tuple.Create(action, state);
-                    pack = ref Get(packs_, --index_);
-                }
-
-                pack.action = action;
-                pack.state = state;
-
-                return GetBoxedInteger(index_);
+                Tuple2<TAction, TState> tuple = ObjectPool<Tuple2<TAction, TState>>.Shared.Rent();
+                tuple.Item1 = action;
+                tuple.Item2 = state;
+                return tuple;
             }
         }
     }
