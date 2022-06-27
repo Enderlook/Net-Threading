@@ -36,7 +36,7 @@ namespace Enderlook.Threading
 
         private class HelperActionNonAlloc<TAction> where TAction : IAction
         {
-            public static readonly Action<object> Basic = new HelperActionNonAlloc<TAction>().BasicMethod; // Instance calls are more performant..
+            public static readonly Action<object> Basic = new HelperActionNonAlloc<TAction>().BasicMethod; // Instance calls are more performant.
 
             private void BasicMethod(object obj)
             {
