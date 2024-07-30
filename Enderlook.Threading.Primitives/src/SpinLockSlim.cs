@@ -75,7 +75,7 @@ public struct SpinLockSlim
 #else
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
-    public void TryEnter(ref bool taken) => taken = TryAcquire();
+    public void TryEnter(ref bool taken) => taken = !TryAcquire();
 
     /// <summary>
     /// Try enter the lock if it's not already acquired.

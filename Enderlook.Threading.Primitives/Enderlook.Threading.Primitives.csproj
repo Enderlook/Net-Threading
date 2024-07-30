@@ -9,7 +9,7 @@
 		<Product>Enderlook.Threading.Primitives</Product>
 		<RepositoryUrl>https://github.com/Enderlook/Net-Threading/</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
-		<Version>0.2.0</Version>
+		<Version>0.2.1</Version>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<LangVersion>12</LangVersion>
 		<CheckForOverflowUnderflow Condition="'$(Configuration)' == 'Debug'">true</CheckForOverflowUnderflow>
