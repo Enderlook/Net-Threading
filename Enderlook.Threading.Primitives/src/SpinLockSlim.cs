@@ -47,6 +47,25 @@ public struct SpinLockSlim
     }
 
     /// <summary>
+    /// Enter the lock.
+    /// </summary>
+    /// <param name="taken">If the method returns, this will be always <see langword="true"/>.<br/>
+    /// If an exception ocurrs, the parameter will be asigned the value <see langword="true"/> only if the lock was taken.<br/>
+    /// Otherwise, no value is assigned.</param>
+    /// <param name="spinWait">Spinner used to wait between attempts of locking.</param>
+#if NET5_0_OR_GREATER
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+#else
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
+    public void Enter(ref bool taken, ref SpinWait spinWait)
+    {
+        while (TryAcquire())
+            spinWait.SpinOnce();
+        taken = true;
+    }
+
+    /// <summary>
     /// Try enter the lock if it's not already acquired.
     /// </summary>
     /// <param name="taken">If the method returns, this determines if the lock was taken.<br/>
